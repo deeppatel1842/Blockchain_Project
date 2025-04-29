@@ -1,0 +1,4 @@
+Attestation Gas: 149442
+claimSBT Gas: 118431
+Attestation Gas: 149442
+claimWithProof Gas: 326792
