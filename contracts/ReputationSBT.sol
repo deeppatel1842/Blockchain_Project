@@ -4,9 +4,17 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-// Interface for AttestationSystem
 interface IAttestationSystem {
     function getPoints(address user) external view returns (uint256);
+}
+
+interface VerifierInterface {
+    function verifyProof(
+        uint[2] memory a,
+        uint[2][2] memory b,
+        uint[2] memory c,
+        uint[1] memory input
+    ) external view returns (bool r);
 }
 
 contract ReputationSBT is ERC721, Ownable {
@@ -17,24 +25,44 @@ contract ReputationSBT is ERC721, Ownable {
     mapping(address => uint256) public addressToToken;
 
     IAttestationSystem public attestationContract;
+    VerifierInterface public verifierContract;
 
-    constructor(address initialOwner, address _attestation)
+    constructor(address initialOwner, address _attestation, address _verifier)
         ERC721("ReputationSBT", "RSBT")
         Ownable(initialOwner)
     {
         tokenCounter = 1;
         attestationContract = IAttestationSystem(_attestation);
+        verifierContract = VerifierInterface(_verifier);
     }
 
+    // 🔥 Old claimSBT (trust-based), kept optional
     function claimSBT() external {
         require(addressToToken[msg.sender] == 0, "Already owns an SBT");
 
-        //uint256 reputation = attestationContract.getPoints(msg.sender);
-        //require(reputation >= MIN_REP_POINTS, "Not enough reputation");
+        uint256 reputation = attestationContract.getPoints(msg.sender);
+        require(reputation >= MIN_REP_POINTS, "Not enough reputation");
 
         uint256 tokenId = tokenCounter;
         _safeMint(msg.sender, tokenId);
-        reputationScores[tokenId] = 50;
+        reputationScores[tokenId] = reputation;
+        addressToToken[msg.sender] = tokenId;
+        tokenCounter++;
+    }
+
+    // 🔐 New claimWithProof() — ZKP based!
+    function claimWithProof(
+        uint[2] memory a,
+        uint[2][2] memory b,
+        uint[2] memory c,
+        uint[1] memory input
+    ) external {
+        require(addressToToken[msg.sender] == 0, "Already owns an SBT");
+        require(verifierContract.verifyProof(a, b, c, input), "Invalid ZK proof");
+
+        uint256 tokenId = tokenCounter;
+        _safeMint(msg.sender, tokenId);
+        reputationScores[tokenId] = input[0];
         addressToToken[msg.sender] = tokenId;
         tokenCounter++;
     }
