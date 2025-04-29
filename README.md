@@ -133,6 +133,22 @@ node scripts/gas_chart.js
 
 ---
 
+ Team Member | Contributions |
+|-------------|---------------|
+| Deep Patel (deeppatel1842) | 
+- Smart contract development (`AttestationSystem.sol`, `ReputationSBT.sol`)
+- Off-chain proof generation (`snarkjs`)
+- Hardhat deployment scripts (`deploy.js`, `callWithProof.js`)
+- Gas measurement and benchmarking
+- Scroll L2 contract deployment
+- Project documentation (README, gas charts) |
+| Saahil Saxena (saahilsaxena2000) | 
+- Integration testing (`test/`)
+-  ZKP Circuit creation (`reputation.circom`)
+- Helped with Scroll setup and deployment scripts
+- Assisted in gas_chart.js for visualization
+- Code review and fixes for final deployment |
+
 ## 📚 Future Work
 
 - Build a frontend UI (React + MetaMask integration)
