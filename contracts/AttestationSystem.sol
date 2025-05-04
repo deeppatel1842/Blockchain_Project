@@ -24,14 +24,14 @@ contract AttestationSystem {
     function attest(address to, uint256 points, string calldata message) external payable {
         require(to != msg.sender, "Cannot attest to self");
 
-        // ✅ Transfer ETH to recipient
+        // Transfer ETH to recipient
         if (msg.value > 0) {
             (bool sent, ) = payable(to).call{value: msg.value}("");
             require(sent, "ETH transfer failed");
             emit ETHTransferred(to, msg.value);
         }
 
-        // ✅ Store the attestation
+        // Store the attestation
         Attestation memory a = Attestation(msg.sender, points, message, msg.value);
         attestations[to].push(a);
 
