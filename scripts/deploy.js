@@ -2,25 +2,24 @@ const hre = require("hardhat");
 const readline = require("readline-sync");
 const fs = require("fs");
 
-// snarkjs-calldata proof
 const proof = {
   a: [
-    "0x2283881dcbf9a278b2e6a84f8eff0541a34c3c114683c603c28d36b38c287f8d",
-    "0x209c750dbaedc96c1565b3d998c1bace1f3290f67f06867a454a0a6b00661e2e"
+    "0x069defb5afd650fd570cac8d1f393a1852cbeea976d92831ed4aed77e8acc457",
+    "0x11d14589febf58db35a22fb38900ba7175cb7a984bda4308f07447aab1eb9ab9"
   ],
   b: [
     [
-      "0x1b2d20db08391e4aa918d54ef96e6e52efafeed60dd66a240080d0edfabecc50",
-      "0x07fca4388c1ddaf21aa84a53dd4867960773a3cfdab74426dbccc3efed66fc2d"
+      "0x18295bd5c24822f5174618dd8f88de07e2103502f1d5d5226ca7e94f229c30ef",
+      "0x046cc4a7ed250f317dea7a5f9e9ad3b06dac90a33641001b29034ae1cac5ed27"
     ],
     [
-      "0x0c6f4fbb1e4c4a175ebf52d491b0b47de560df75466541406d51425fd9c82458",
-      "0x0440940a8f4afa380b18ca47510b7f5a2802e545606bec2507c24262ad6d3856"
+      "0x1b42dec25037f13496521de5682bc9f9f1580a105a14ed0b16b916fbf7856ae0",
+      "0x2414cd50bc4ca4b509e9744a585c578d55de0e4ac9dbb96e77035c5474c8e081"
     ]
   ],
   c: [
-    "0x08ac4269614e9a33fa29092b1d2089c52997ae19e4fcd0ce5e4233b077ecc00a",
-    "0x304766037bd577f50b15be76a5ab6d90dcd8be9019dd8611bafa6c42057e8534"
+    "0x1ad9ec34d0791e1568628b1fc7da1746f5aeb786e076adbaad6c945d346a7e4f",
+    "0x0de7bcbb4a2970eac6616787557001e7803148e3f12c52366eded7de2fd456ee"
   ],
   input: [
     "0x0000000000000000000000000000000000000000000000000000000000000001"
@@ -33,57 +32,65 @@ async function main() {
 
   const recipient = readline.question("Enter recipient address: ");
 
+  // Deploy Verifier
   const Verifier = await hre.ethers.getContractFactory("Groth16Verifier");
   const verifier = await Verifier.deploy();
   await verifier.waitForDeployment();
-  const verifierAddress = await verifier.getAddress();
-  console.log("✅ Groth16Verifier deployed at:", verifierAddress);
+  console.log("✅ Groth16Verifier deployed at:", await verifier.getAddress());
 
+  // Deploy AttestationSystem
   const Att = await hre.ethers.getContractFactory("AttestationSystem");
   const attestation = await Att.deploy();
   await attestation.waitForDeployment();
-  const attAddress = await attestation.getAddress();
-  console.log("✅ AttestationSystem deployed at:", attAddress);
+  console.log("✅ AttestationSystem deployed at:", await attestation.getAddress());
 
+  // Deploy ReputationSBT
   const SBT = await hre.ethers.getContractFactory("ReputationSBT");
-  const sbt = await SBT.deploy(deployer.address, attAddress);
+  const sbt = await SBT.deploy(deployer.address, await attestation.getAddress(), await verifier.getAddress());
   await sbt.waitForDeployment();
-  const sbtAddress = await sbt.getAddress();
-  console.log("✅ ReputationSBT deployed at:", sbtAddress);
+  console.log("✅ ReputationSBT deployed at:", await sbt.getAddress());
+
+  console.log("\n========== 📝 ATTTESTATION ==========");
 
   const balanceBefore = await hre.ethers.provider.getBalance(recipient);
-  console.log("💰 Recipient balance before:", hre.ethers.formatEther(balanceBefore));
+  console.log("💰 Recipient balance before:", hre.ethers.formatEther(balanceBefore), "ETH");
 
   const attTx = await attestation.attest(recipient, 60, "Legend contributor!", {
     value: hre.ethers.parseEther("0.001"),
   });
   const attReceipt = await attTx.wait();
-  console.log(`📬 Attestation successful. Gas used: ${attReceipt.gasUsed}`);
+  console.log(`📬 Attestation Successful!`);
+  console.log(`⛽ Gas Used: ${attReceipt.gasUsed}`);
+  console.log(`🔗 Tx Hash: ${attReceipt.hash}`);
+  console.log(`🌍 Explorer Link: https://sepolia.scrollscan.com/tx/${attReceipt.hash}`);
 
   const balanceAfter = await hre.ethers.provider.getBalance(recipient);
-  console.log("💰 Recipient balance after:", hre.ethers.formatEther(balanceAfter));
+  console.log("💰 Recipient balance after:", hre.ethers.formatEther(balanceAfter), "ETH");
 
-  // Log attestation gas
   fs.appendFileSync("gas-logs.txt", `Attestation Gas: ${attReceipt.gasUsed}\n`);
 
-  console.log("🔐 Verifying ZK Proof...");
+  console.log("\n========== 🔐 CLAIM SBT WITH ZKP ==========");
+
+  console.log("Verifying ZK Proof...");
   const isValid = await verifier.verifyProof(proof.a, proof.b, proof.c, proof.input);
   console.log("✅ ZK Proof valid?", isValid);
 
   if (isValid) {
-    const claimTx = await sbt.claimSBT();
+    console.log("🏅 Claiming Soulbound Token...");
+    const claimTx = await sbt.claimWithProof(proof.a, proof.b, proof.c, proof.input);
     const claimReceipt = await claimTx.wait();
-    console.log("🏅 SBT successfully claimed by deployer (based on ZK Proof)!");
-    console.log(`⛽ Gas used for claimSBT(): ${claimReceipt.gasUsed}`);
+    console.log(`✅ SBT Claimed Successfully!`);
+    console.log(`⛽ Gas Used: ${claimReceipt.gasUsed}`);
+    console.log(`🔗 Tx Hash: ${claimReceipt.hash}`);
+    console.log(`🌍 Explorer Link: https://sepolia.scrollscan.com/tx/${claimReceipt.hash}`);
 
-    // Log claim gas
-    fs.appendFileSync("gas-logs.txt", `claimSBT Gas: ${claimReceipt.gasUsed}\n`);
+    fs.appendFileSync("gas-logs.txt", `claimWithProof Gas: ${claimReceipt.gasUsed}\n`);
   } else {
-    console.log("❌ ZKP failed — cannot claim SBT.");
+    console.log("❌ Invalid ZKP — Cannot Claim SBT.");
   }
 }
 
-main().catch((err) => {
-  console.error("Deployment failed:", err);
-  process.exitCode = 1;
+main().catch((error) => {
+  console.error("Deployment failed:", error);
+  process.exit(1);
 });
