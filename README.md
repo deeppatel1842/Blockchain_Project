@@ -66,7 +66,7 @@ Built using:
 
 > Coordinape and SourceCred are off-chain systems, thus no Ethereum gas is spent for building reputation.
 
-![Gas Chart](./gas_chart.png)
+![Gas Chart](./final_attest_vs_claimwithproof.png)
 
 ---
 
