@@ -36,7 +36,7 @@ contract ReputationSBT is ERC721, Ownable {
         verifierContract = VerifierInterface(_verifier);
     }
 
-    // 🔥 Old claimSBT (trust-based), kept optional
+    // Old claimSBT (trust-based), kept optional
     function claimSBT() external {
         require(addressToToken[msg.sender] == 0, "Already owns an SBT");
 
@@ -50,7 +50,7 @@ contract ReputationSBT is ERC721, Ownable {
         tokenCounter++;
     }
 
-    // 🔐 New claimWithProof() — ZKP based!
+    // New claimWithProof() — ZKP based!
     function claimWithProof(
         uint[2] memory a,
         uint[2][2] memory b,
