@@ -14,6 +14,10 @@ module.exports = {
     scrollTestnet: {
       url: SCROLL_RPC_URL,
       accounts: [`0x${PRIVATE_KEY}`],
+      chainId: 534351,  
+      gas: "auto",
+      gasPrice: "auto",
     },
   },
 };
+
